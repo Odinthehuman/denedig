@@ -1,5 +1,5 @@
 <?php
-
+//process_orientador.php
 include '../funciones/conexQRConejo.php';
 
 

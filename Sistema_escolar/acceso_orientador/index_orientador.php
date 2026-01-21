@@ -1,7 +1,7 @@
 <?php
 include '../funciones/conexQRConejo.php';
 session_start();
-
+//index_orientador.php
 if (!isset($_SESSION['id_credencial']) || !isset($_SESSION['nivel_usuario']) || $_SESSION['nivel_usuario'] != 4) {
     echo "Acceso denegado. Detalles de la sesión:";
     var_dump($_SESSION);

@@ -1,6 +1,6 @@
 <?php
 date_default_timezone_set('America/Mexico_City'); // Establecer la zona horaria de CDMX
-
+//scan_qr_orientador.php
 $servername = "localhost";
 $username = "u880452948_Conejo";
 $password = "Jjn8econ[9";

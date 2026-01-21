@@ -2,7 +2,7 @@
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
-
+//info_grupo.php
 
 
 
@@ -405,7 +405,7 @@ $result_materias = mysqli_query($conexion, $query_materias_maestros);
                     <?php endif; ?>
                 </div>
 
-                <a href="boleta_alumnos.php?grado=<?= urlencode($grado) ?>&grupo=<?= urlencode($grupo) ?>&turno=<?= urlencode($turno) ?>" 
+                <a href="boleta_alumnos_nueva.php?grado=<?= urlencode($grado) ?>&grupo=<?= urlencode($grupo) ?>&turno=<?= urlencode($turno) ?>" 
                    class="btn btn-primary btn-boletas">
                    <i class="fas fa-file-alt me-2"></i>Ver Boleta Grupal
                 </a>

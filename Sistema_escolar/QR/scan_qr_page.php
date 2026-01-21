@@ -1,5 +1,5 @@
 <?php    
-// Configuración de la base de datos
+// scan_qr_page.php
 include '../funciones/conexQRConejo.php';
 
 // Crear conexión

@@ -1,5 +1,5 @@
 <?php
-// Incluir la conexión a la base de datos
+// vista_general_grupos.php
 include '../funciones/conexQRConejo.php';
 
 // Iniciar la sesión
