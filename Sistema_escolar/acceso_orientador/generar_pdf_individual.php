@@ -1,5 +1,5 @@
 <?php
-// generar_pdf_individual.php — Boleta con encabezado azul
+// generar_pdf_individual.php — Diseño limpio y espaciado
 session_start();
 if (!isset($_SESSION['id_credencial'])) die("Acceso denegado.");
 
@@ -41,7 +41,7 @@ $escuela = $alum['nombre_escuela'];
 // --- Fotos ---
 $foto1 = !empty($alum['ruta_foto'])  ? $_SERVER['DOCUMENT_ROOT'] . '/sistema_escolar/' . ltrim($alum['ruta_foto'], '/')  : '';
 $foto2 = !empty($alum['ruta_foto2']) ? $_SERVER['DOCUMENT_ROOT'] . '/sistema_escolar/' . ltrim($alum['ruta_foto2'], '/') : '';
-$foto_default = __DIR__ . '/fpdf/placeholder.png';
+$foto_default = __DIR__ . '/fpdf/foto_placeholder.png';
 
 if (file_exists($foto1))      $foto_usar = $foto1;
 elseif (file_exists($foto2))  $foto_usar = $foto2;
@@ -87,53 +87,53 @@ class BoletaPDF extends FPDF {
 }
 
 $pdf = new BoletaPDF('P', 'mm', 'Letter');
-$pdf->SetMargins(15, 15, 15);
-$pdf->SetAutoPageBreak(true, 25);
+$pdf->SetMargins(20, 20, 20); // Márgenes más generosos
+$pdf->SetAutoPageBreak(true, 30); // Espacio para pie de página
 $pdf->AddPage();
 
-// === Título ===
-$pdf->SetFont('Arial', 'B', 16);
-$pdf->Cell(0, 10, utf8_decode('BOLETA DE CALIFICACIONES'), 0, 1, 'C');
-$pdf->Ln(5);
-
-// === Datos escuela ===
-$pdf->SetFont('Arial', '', 10);
-$pdf->Cell(0, 6, utf8_decode("Escuela: $escuela"), 0, 1, 'C');
-$pdf->Cell(0, 6, utf8_decode("Grado: $grado - Grupo: $grupo - Turno: $turno"), 0, 1, 'C');
+// === Título principal ===
+$pdf->SetFont('Arial', 'B', 18);
+$pdf->Cell(0, 15, utf8_decode('BOLETA DE CALIFICACIONES'), 0, 1, 'C');
 $pdf->Ln(10);
 
-// === Foto + nombre ===
+// === Información de la escuela ===
+$pdf->SetFont('Arial', '', 11);
+$pdf->Cell(0, 8, utf8_decode("Escuela: $escuela"), 0, 1, 'C');
+$pdf->Cell(0, 8, utf8_decode("Grado: $grado - Grupo: $grupo - Turno: $turno"), 0, 1, 'C');
+$pdf->Ln(15);
+
+// === Foto + Nombre ===
 $x_foto = 20;
 $y_foto = $pdf->GetY();
 
 if (file_exists($foto_usar)) {
     list($w, $h) = getimagesize($foto_usar);
     $ratio = $h / $w;
-    $ancho = 25;
-    $alto  = min(30, 25 * $ratio);
+    $ancho = 30;
+    $alto  = min(40, 30 * $ratio);
     $pdf->Image($foto_usar, $x_foto, $y_foto, $ancho, $alto);
-    $x_nombre = $x_foto + $ancho + 10;
+    $x_nombre = $x_foto + $ancho + 15;
 } else {
     $x_nombre = $x_foto;
 }
 
-$pdf->SetXY($x_nombre, $y_foto);
-$pdf->SetFont('Arial', 'B', 12);
-$pdf->MultiCell(0, 6, utf8_decode("Estudiante: $nombre_completo"));
-$pdf->Ln(10);
+$pdf->SetXY($x_nombre, $y_foto + 20); // Alineado verticalmente
+$pdf->SetFont('Arial', 'B', 14);
+$pdf->MultiCell(0, 8, utf8_decode("Estudiante: $nombre_completo"), 0, 'L');
+$pdf->Ln(15);
 
-// ================== TABLA ==================
+// ================== TABLA DE CALIFICACIONES ==================
 
 // --- Encabezado AZUL ---
-$pdf->SetFont('Arial', 'B', 10);
+$pdf->SetFont('Arial', 'B', 11);
 $pdf->SetFillColor(0, 102, 204);
 $pdf->SetTextColor(255, 255, 255);
 $pdf->SetDrawColor(0, 51, 153);
 
-$pdf->Cell(70, 7, 'Materia', 1, 0, 'C', true);
-$pdf->Cell(20, 7, '1° P',   1, 0, 'C', true);
-$pdf->Cell(20, 7, '2° P',   1, 0, 'C', true);
-$pdf->Cell(20, 7, '3° P',   1, 1, 'C', true);
+$pdf->Cell(85, 8, 'Materia', 1, 0, 'C', true);
+$pdf->Cell(25, 8, '1° P', 1, 0, 'C', true);
+$pdf->Cell(25, 8, '2° P', 1, 0, 'C', true);
+$pdf->Cell(25, 8, '3° P', 1, 1, 'C', true);
 
 // --- Filas ---
 $pdf->SetFont('Arial', '', 10);
@@ -147,31 +147,33 @@ foreach ($materias as $mat) {
     $p2 = $calif['segundo_parcial'] ?? 'NA';
     $p3 = $calif['tercer_parcial']  ?? 'NA';
 
-    $pdf->Cell(70, 6, utf8_decode($mat['nombre_materia']), 1);
-    $pdf->Cell(20, 6, $p1, 1, 0, 'C');
-    $pdf->Cell(20, 6, $p2, 1, 0, 'C');
-    $pdf->Cell(20, 6, $p3, 1, 1, 'C');
+    $pdf->Cell(85, 7, utf8_decode($mat['nombre_materia']), 1);
+    $pdf->Cell(25, 7, $p1, 1, 0, 'C');
+    $pdf->Cell(25, 7, $p2, 1, 0, 'C');
+    $pdf->Cell(25, 7, $p3, 1, 1, 'C');
 }
 
+$pdf->Ln(10); // Espacio antes de las firmas
+
+// === Firmas de enterado ===
+$pdf->SetFont('Arial', 'B', 12);
+$pdf->Cell(0, 10, utf8_decode('FIRMAS DE ENTERADO POR PARCIAL'), 0, 1, 'C');
 $pdf->Ln(10);
 
-// === Firmas ===
-$pdf->SetFont('Arial', 'B', 10);
-$pdf->Cell(0, 6, utf8_decode('FIRMAS DE ENTERADO POR PARCIAL'), 0, 1, 'C');
-$pdf->Ln(5);
-
-$pdf->SetFont('Arial', '', 9);
+$pdf->SetFont('Arial', '', 10);
 $parciales = ['Primer Parcial', 'Segundo Parcial', 'Tercer Parcial'];
+
 foreach ($parciales as $p) {
-    $pdf->Cell(0, 6, utf8_decode("______________________________________________"), 0, 1, 'C');
-    $pdf->Cell(0, 6, utf8_decode("Firma de Enterado - $p"), 0, 1, 'C');
-    $pdf->Ln(8);
+    $pdf->Cell(0, 8, utf8_decode("__________________________________________________________"), 0, 1, 'C');
+    $pdf->Cell(0, 8, utf8_decode("Firma de Enterado - $p"), 0, 1, 'C');
+    $pdf->Ln(15); // Más espacio entre firmas
 }
 
-// === Pie ===
-$pdf->SetY(-20);
+// === Pie de página ===
+$pdf->SetY(-25);
 $pdf->SetFont('Arial', 'I', 8);
-$pdf->Cell(0, 10, utf8_decode('Documento generado automáticamente ' . date('d/m/Y H:i')), 0, 0, 'C');
+$pdf->SetTextColor(120,120,120);
+$pdf->Cell(0, 8, utf8_decode('Documento oficial • Generado el ' . date('d/m/Y H:i')), 0, 0, 'C');
 
 // Salida
 $filename = "Boleta_" . preg_replace('/[^a-zA-Z0-9_]/', '_', $nombre_completo) . ".pdf";
