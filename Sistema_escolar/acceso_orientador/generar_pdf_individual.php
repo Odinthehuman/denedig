@@ -52,7 +52,6 @@ $turno   = $alum['turno_credencial'];
 $escuela = $alum['nombre_escuela'];
 $cct = $alum['cct_escuela'];
 
-
 // ================= FOTO =================
 $foto1 = !empty($alum['ruta_foto'])  
     ? $_SERVER['DOCUMENT_ROOT'] . '/sistema_escolar/' . ltrim($alum['ruta_foto'], '/')  
@@ -102,8 +101,27 @@ while ($row = mysqli_fetch_assoc($result)) {
 require_once 'fpdf/fpdf.php';
 
 class BoletaPDF extends FPDF {
-    function Header() {}
-    function Footer() {}
+
+    function Header() {
+        // (si quieres encabezado, aquí va)
+    }
+
+    function Footer() {
+        // Posición fija 12 mm antes del borde inferior
+        $this->SetY(-12);
+
+        // Color y fuente
+        $this->SetTextColor(100, 100, 100);
+        $this->SetFont('Arial', 'I', 7);
+
+        // Línea separadora (opcional)
+        $this->SetDrawColor(200, 200, 200);
+        $this->Line(12, $this->GetY(), 204, $this->GetY()); // 12 = margen izq, 204 = ancho carta - margen der
+
+        // Texto centrado
+        $this->SetY(-9);
+        $this->Cell(0, 5, utf8_decode('Documento oficial - Generado el ' . date('d/m/Y H:i')), 0, 0, 'C');
+    }
 }
 
 $pdf = new BoletaPDF('P', 'mm', 'Letter');
@@ -252,27 +270,25 @@ $pdf->Ln(6);
 
 $pdf->SetFont('Arial', 'B', 11);
 $pdf->Cell(45, 6, utf8_decode('Nombre de la escuela:'), 0, 0);
+
 $pdf->SetFont('Arial', '', 11);
 $pdf->MultiCell(0, 6, utf8_decode($escuela));
-
-$pdf->Ln(2);
 
 $pdf->SetFont('Arial', 'B', 11);
 $pdf->Cell(45, 6, utf8_decode('Dirección:'), 0, 0);
 $pdf->SetFont('Arial', '', 11);
 $pdf->MultiCell(0, 6, utf8_decode($direccion),0,1);
 
-$pdf->Ln(2);
-$otrox = $x + 130; // mueve el bloque a la derecha
-$otroy = $y +43;
-// Mostramos el CCT 
-$pdf->SetFont('Arial', 'B', 11);
-$pdf->SetXY($otrox, $otroy);
-$pdf->Cell(25,6,utf8_decode("CCT:"),0,0);
-$pdf->SetFont('Arial', 'I', 11);
-$pdf->Cell(0, 6, utf8_decode( $cct), 0, 1);
+$yDespues = $pdf->GetY();   // ← posición real después del texto
 
-$pdf->Ln(16);
+$pdf->SetXY(150, $yDespues - 6); // ajusta según tu diseño
+$pdf->SetFont('Arial', 'B', 11);
+$pdf->Cell(15, 6, 'CCT:', 0, 0);
+
+$pdf->SetFont('Arial', 'I', 11);
+$pdf->Cell(0, 6, utf8_decode($cct), 0, 1);
+
+$pdf->Ln(8);
 
 // ================== TABLA DE CALIFICACIONES ==================
 $pdf->SetFont('Arial', 'B', 10);
@@ -369,11 +385,11 @@ if (is_numeric($p1) && is_numeric($p2) && is_numeric($p3)) {
     $pdf->Cell(30, 6, $prom, 1, 1, 'C');
 }
 **/
-$pdf->Ln(8);
+$pdf->Ln(1);
 
 // === PROMEDIO FINAL DE GRADO ===
 $pdf->SetFont('Arial', 'B', 10);
-$pdf->Cell(100, 6, utf8_decode('PROMEDIO FINAL DE GRADO ESCOLAR'), 1, 0, 'C', true);
+$pdf->Cell(100, 6, utf8_decode('PROMEDIO GENERAL'), 1, 0, 'C', true);
 $pdf->Cell(30, 6, '8.1', 1, 1, 'C', true); // Calcula si lo deseas
 
 
@@ -407,7 +423,9 @@ $pdf->Cell($ancho, 6, utf8_decode('Firma 1'), 1, 0, 'C',true);
 $pdf->Cell($ancho, 6, utf8_decode('Firma 2'), 1, 0, 'C',true);
 $pdf->Cell($ancho, 6, utf8_decode('Firma 3'), 1, 1, 'C',true);
 
-$pdf->Ln(15);
+
+$pdf->AddPage();
+
 // === TABLA DE OBSERVACIONES Y SUGERENCIAS ===
 
 $pdf->SetFont('Arial', 'B', 10);
@@ -455,14 +473,6 @@ $pdf->SetTextColor(0, 0, 0); // Negro para el contenido
 $pdf->Cell($ancho_observaciones, 30, '', 1, 1, 'L');
 
 $pdf->Ln(8);
-
-// === PIE DE PÁGINA ===
-$pdf->SetTextColor(0, 0, 0);       // negro
-$pdf->SetFillColor(255, 255, 255); // fondo blanco
-$pdf->SetFont('Arial', 'I', 7);
-$pdf->SetTextColor(100, 100, 100);
-$pdf->Cell(0, 5, utf8_decode('Documento oficial - Generado el ' . date('d/m/Y H:i')), 0, 0, 'C');
-
 // Salida
 $filename = "Boleta_" . preg_replace('/[^a-zA-Z0-9_]/', '_', $nombre_completo) . ".pdf";
 $pdf->Output('I', $filename);
