@@ -121,99 +121,110 @@ $pdf->Ln(15);
 // === DATOS DEL ALUMNO ===
 $pdf->SetFont('Arial', 'B', 10);
 $pdf->SetFillColor(220, 220, 220);
-$pdf->Cell(0, 6, utf8_decode('DATOS DEL(AL) ALUMNO(A)'), 0, 1, 'C',true);
-$pdf->SetFont('Arial', '', 9);
+$pdf->Cell(0, 6, utf8_decode('DATOS DEL(AL) ALUMNO(A)'), 0, 1, 'C', true);
+$pdf->Ln(6);
 
-$pdf->Ln(10);
-
+// Apellidos
 $apellidos = explode(' ', decryptData($alum['apellidos_credencial'], $secretKey));
-$apellido1 = $apellidos[0] ?? '';
-$apellido2 = $apellidos[1] ?? '';
-
-// ================= DATOS =================
-$primer_apellido  = strtoupper($apellido1);
-$segundo_apellido = strtoupper($apellido2);
+$primer_apellido  = strtoupper($apellidos[0] ?? '');
+$segundo_apellido = strtoupper($apellidos[1] ?? '');
 $nombres          = strtoupper($alum['nombre_credencial']);
 
 $x = 12;
 $y = $pdf->GetY();
 
+// Medidas
 $foto_ancho = 30;
 $foto_alto  = 35;
-$separacion = 5;
+$separacion = 6;
+$ancho_texto = 190 - $foto_ancho - $separacion;
 
-$ancho_nombres = 190 - $foto_ancho - $separacion;
-
-// ====== TÍTULOS ======
-$pdf->SetFont('Arial', '', 9);
+// ====== TEXTO ======
+$pdf->SetFont('Arial', 'B', 11);
 $pdf->SetXY($x, $y);
-$pdf->Cell(45, 4, utf8_decode('PRIMER APELLIDO'), 0, 0, 'C');
-$pdf->Cell(45, 4, utf8_decode('SEGUNDO APELLIDO'), 0, 0, 'C');
-$pdf->Cell($ancho_nombres - 90, 4, utf8_decode('NOMBRE(S)'), 0, 0, 'C');
+$pdf->Cell(40, 6, utf8_decode('Primer apellido:'), 0, 0);
+$pdf->SetFont('Arial', '', 11);
+$pdf->Cell(60, 6, utf8_decode($primer_apellido), 0, 1);
 
+$pdf->SetFont('Arial', 'B', 11);
+$pdf->SetX($x);
+$pdf->Cell(40, 6, utf8_decode('Segundo apellido:'), 0, 0);
+$pdf->SetFont('Arial', '', 11);
+$pdf->Cell(60, 6, utf8_decode($segundo_apellido), 0, 1);
+
+$pdf->SetFont('Arial', 'B', 11);
+$pdf->SetX($x);
+$pdf->Cell(40, 6, utf8_decode('Nombre(s):'), 0, 0);
+$pdf->SetFont('Arial', '',11);
+$pdf->Cell($ancho_texto - 40, 6, utf8_decode($nombres), 0, 1);
+// ====== BLOQUE GRADO / GRUPO / TURNO ======
+$info_x = $x + 90; // mueve el bloque a la derecha
+$info_y = $y;       // mismo nivel que apellidos
+
+$pdf->SetFont('Arial', 'B', 11);
+$pdf->SetXY($info_x, $info_y);
+$pdf->Cell(22, 6, utf8_decode('Grado:'), 0, 0);
+$pdf->SetFont('Arial', '', 11);
+$pdf->Cell(20, 6, utf8_decode($grado), 0, 1);
+
+$pdf->SetFont('Arial', 'B', 11);
+$pdf->SetX($info_x);
+$pdf->Cell(22, 6, utf8_decode('Grupo:'), 0, 0);
+$pdf->SetFont('Arial', '', 11);
+$pdf->Cell(20, 6, utf8_decode($grupo), 0, 1);
+
+$pdf->SetFont('Arial', 'B', 11);
+$pdf->SetX($info_x);
+$pdf->Cell(22, 6, utf8_decode('Turno:'), 0, 0);
+$pdf->SetFont('Arial', '', 11);
+$pdf->Cell(20, 6, utf8_decode($turno), 0, 1); 
 // ====== FOTO ======
-$foto_y = $y -8;
+$foto_y = $y - 5;
 
-
-// Imagen
-// Marco de la foto
 $pdf->Rect(
-$x + $ancho_nombres + $separacion,
-$foto_y,
-$foto_ancho,
-$foto_alto
-);
-$pdf->Image(
-    $foto,
-    $x + $ancho_nombres + $separacion,
+    $x + $ancho_texto + $separacion,
     $foto_y,
     $foto_ancho,
     $foto_alto
 );
 
-// ====== LÍNEA ======
-$pdf->Line($x, $y + 6, $x + $ancho_nombres, $y + 6);
-// ====== TEXTO ======
-$pdf->SetFont('Arial', '', 9);
-$pdf->SetXY($x, $y + 7);
-$pdf->Cell(45, 6, utf8_decode($primer_apellido), 0, 0, 'C');
-$pdf->Cell(45, 6, utf8_decode($segundo_apellido), 0, 0, 'C');
-$pdf->Cell($ancho_nombres - 90, 6, utf8_decode($nombres), 0, 1, 'C');
+$pdf->Image(
+    $foto,
+    $x + $ancho_texto + $separacion,
+    $foto_y,
+    $foto_ancho,
+    $foto_alto
+);
 
-$pdf->Ln(15);
-
+$pdf->Ln(13);
 // === DATOS DE LA ESCUELA ===
 $pdf->SetFont('Arial', 'B', 10);
-$pdf->Cell(0, 6, utf8_decode('DATOS DE LA ESCUELA'), 0, 1, 'C',true);
-$pdf->Ln(4);
-$pdf->SetFont('Arial', '', 9);
+$pdf->SetFillColor(220, 220, 220);
+$pdf->Cell(0, 6, utf8_decode('DATOS DE LA ESCUELA'), 0, 1, 'C', true);
+$pdf->Ln(6);
 
-$x = 12;
-$y = $pdf->GetY();
+$pdf->SetFont('Arial', 'B', 11);
+$pdf->Cell(45, 6, utf8_decode('Nombre de la escuela:'), 0, 0);
+$pdf->SetFont('Arial', '', 11);
+$pdf->MultiCell(0, 6, utf8_decode($escuela));
 
-// Línea superior
-$pdf->Line($x, $y+5, $x +190, $y+5);
+$pdf->Ln(2);
 
-// Texto
-$pdf->SetFont('Arial', '', 9);
-$pdf->SetXY($x, $y );
-$pdf->Cell(60, 4, utf8_decode('NOMBRE DE LA ESCUELA'), 0, 0, 'C');
-$pdf->Cell(100, 4, utf8_decode('DIRECCIÓN'), 0, 1, 'C');
-$pdf->SetFont('Arial', '', 9);
-$pdf->SetXY($x, $y + 7);
-$pdf->Cell(100, 6, utf8_decode($escuela), 0, 0);
-$pdf->Cell(100, 6, utf8_decode($direccion), 0, 1);
+$pdf->SetFont('Arial', 'B', 11);
+$pdf->Cell(45, 6, utf8_decode('Dirección:'), 0, 0);
+$pdf->SetFont('Arial', '', 11);
+$pdf->MultiCell(0, 6, utf8_decode($direccion));
 
-$pdf->Ln(8);
+$pdf->Ln(6);
 
 // ================== TABLA DE CALIFICACIONES ==================
-$pdf->SetFont('Arial', 'B', 9);
+$pdf->SetFont('Arial', 'B', 10);
 $pdf->SetFillColor(220, 220, 220);
-$pdf->Cell(90, 7, utf8_decode('Materias'), 1, 0, 'C', true);
+$pdf->Cell(100, 7, utf8_decode('Materias'), 1, 0, 'C', true);
 $pdf->Cell(15, 7, 'I', 1, 0, 'C', true);
 $pdf->Cell(15, 7, 'II', 1, 0, 'C', true);
 $pdf->Cell(15, 7, 'III', 1, 0, 'C', true);
-$pdf->Cell(30, 7, utf8_decode('PROMEDIO FINAL'), 1, 1, 'C', true);
+$pdf->Cell(35, 7, utf8_decode('PROMEDIO FINAL'), 1, 1, 'C', true);
 
 $pdf->SetFont('Arial', '', 9);
 
@@ -252,13 +263,13 @@ foreach ($materias as $mat) {
 
     $prom = calcularPromedio($p1, $p2, $p3);
     $pdf->SetTextColor(0, 0, 0);
-    $pdf->Cell(90, 6, utf8_decode($mat['nombre_materia']), 1);
+    $pdf->Cell(100, 6, utf8_decode($mat['nombre_materia']), 1);
     $pdf->Cell(15, 6, $p1, 1, 0, 'C');
     $pdf->Cell(15, 6, $p2, 1, 0, 'C');
     $pdf->Cell(15, 6, $p3, 1, 0, 'C');
     setColorPorPromedio($pdf, $prom);//Llamamos a la funcion para los colores
     $pdf->SetFont('Arial', 'B', 10);//cambia el ancho de la letra en el promedio
-    $pdf->Cell(30, 6, $prom, 1, 1, 'C');
+    $pdf->Cell(35, 6, $prom, 1, 1, 'C');
     $pdf->SetFont('Arial', '', 9);//regresa el tamaño normal
     $pdf->SetTextColor(0, 0, 0); // reset
 }
