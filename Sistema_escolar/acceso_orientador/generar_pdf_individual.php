@@ -29,8 +29,10 @@ $stmt = mysqli_prepare($conexion, "
         c.grupo_credencial, 
         c.turno_credencial, 
         c.id_escuela,
+        c.curp_credencial,
         e.nombre_escuela,
-        e.direccion
+        e.direccion,
+        e.N_SEP AS cct_escuela  
     FROM credenciales c
     JOIN escuelas e ON c.id_escuela = e.id_escuela
     WHERE c.id_credencial = ?
@@ -48,6 +50,8 @@ $grado   = $alum['grado_credencial'];
 $grupo   = $alum['grupo_credencial'];
 $turno   = $alum['turno_credencial'];
 $escuela = $alum['nombre_escuela'];
+$cct = $alum['cct_escuela'];
+
 
 // ================= FOTO =================
 $foto1 = !empty($alum['ruta_foto'])  
@@ -107,17 +111,46 @@ $pdf->SetMargins(12, 12, 12);
 $pdf->SetAutoPageBreak(true, 20);
 $pdf->AddPage();
 
-// === ENCABEZADO OFICIAL ===
+// ================= ENCABEZADO OFICIAL =================
+
+// Rutas de los logos
+$logo_sep   = __DIR__ . '/img/logo_sep.png';
+$logo_edomx = __DIR__ . '/img/edomex.png';
+
+// Medidas y posiciones
+$logo_ancho = 50;
+$logo_y     = 8;
+
+// Logo izquierdo (SEP)
+if (file_exists($logo_sep)) {
+    $pdf->Image($logo_sep, 12, $logo_y, $logo_ancho);
+}
+
+// Logo derecho (Estado de México)
+if (file_exists($logo_edomx)) {
+    $pdf->Image($logo_edomx, 200- $logo_ancho, $logo_y, $logo_ancho);
+}
+
+// Texto centrado
+$pdf->SetY($logo_y);
+
 $pdf->SetFont('Arial', 'B', 10);
 $pdf->Cell(0, 5, utf8_decode('PRUEBA DE BOLETA'), 0, 1, 'C');
-$pdf->SetFont('Arial', 'B', 14);
-$pdf->Cell(0, 6, utf8_decode('SISTEMA EDUCATIVO DENEDIG'), 0, 1, 'C');
-$pdf->SetFont('Arial', 'B', 12);
-$pdf->Cell(0, 6, utf8_decode('REPORTE DE EVALUACIÓN'), 0, 1, 'C');
-$pdf->SetFont('Arial', '', 10);
-$pdf->Cell(0, 5, utf8_decode('1er GRADO DE EDUCACIÓN SECUNDARIA  -  CICLO ESCOLAR 2025-2026'), 0, 1, 'C');
-$pdf->Ln(15);
 
+$pdf->SetFont('Arial', 'B', 14);
+$pdf->Cell(0, 6, utf8_decode('SISTEMA EDUCATIVO NACIONAL'), 0, 1, 'C');
+
+$pdf->SetFont('Arial', 'B', 13);
+$pdf->Cell(0, 6, utf8_decode('ESTADO DE MÉXICO'), 0, 1, 'C');
+
+$pdf->SetFont('Arial', 'I', 12);
+$pdf->Cell(0, 6, utf8_decode('BOLETA DE EVALUACIÓN'), 0, 1, 'C');
+
+$pdf->SetFont('Arial', 'I', 10);
+$pdf->Cell(0, 5, utf8_decode('CICLO ESCOLAR 2025-2026'), 0, 1, 'C');
+
+// Espacio después del encabezado
+$pdf->Ln(12);
 // === DATOS DEL ALUMNO ===
 $pdf->SetFont('Arial', 'B', 10);
 $pdf->SetFillColor(220, 220, 220);
@@ -154,9 +187,23 @@ $pdf->Cell(60, 6, utf8_decode($segundo_apellido), 0, 1);
 
 $pdf->SetFont('Arial', 'B', 11);
 $pdf->SetX($x);
-$pdf->Cell(40, 6, utf8_decode('Nombre(s):'), 0, 0);
+$pdf->Cell(40, 6, utf8_decode('Nombre:'), 0, 0);
 $pdf->SetFont('Arial', '',11);
 $pdf->Cell($ancho_texto - 40, 6, utf8_decode($nombres), 0, 1);
+//curd
+$curp = $alum['curp_credencial'] ?? '';
+$curp_desencriptado = decryptData($curp, $secretKey);
+if ($curp_desencriptado === '' || $curp_desencriptado === '—') {
+    $curp_desencriptado = '—';
+}
+$pdf->SetFont('Arial', 'B', 10);
+$pdf->SetTextColor(0, 0,0);
+$pdf->SetX($x, $y);
+$pdf->Cell(40,6,utf8_decode('CURD:'),0,0);
+$pdf->SetFont('Arial', '',11);
+$pdf->Cell($ancho_texto -40, 6, utf8_decode( $curp_desencriptado), 0, 1);
+$pdf->SetTextColor(0, 0, 0);
+
 // ====== BLOQUE GRADO / GRUPO / TURNO ======
 $info_x = $x + 90; // mueve el bloque a la derecha
 $info_y = $y;       // mismo nivel que apellidos
@@ -213,9 +260,19 @@ $pdf->Ln(2);
 $pdf->SetFont('Arial', 'B', 11);
 $pdf->Cell(45, 6, utf8_decode('Dirección:'), 0, 0);
 $pdf->SetFont('Arial', '', 11);
-$pdf->MultiCell(0, 6, utf8_decode($direccion));
+$pdf->MultiCell(0, 6, utf8_decode($direccion),0,1);
 
-$pdf->Ln(6);
+$pdf->Ln(2);
+$otrox = $x + 130; // mueve el bloque a la derecha
+$otroy = $y +43;
+// Mostramos el CCT 
+$pdf->SetFont('Arial', 'B', 11);
+$pdf->SetXY($otrox, $otroy);
+$pdf->Cell(25,6,utf8_decode("CCT:"),0,0);
+$pdf->SetFont('Arial', 'I', 11);
+$pdf->Cell(0, 6, utf8_decode( $cct), 0, 1);
+
+$pdf->Ln(16);
 
 // ================== TABLA DE CALIFICACIONES ==================
 $pdf->SetFont('Arial', 'B', 10);
@@ -325,7 +382,7 @@ $pdf->Ln(10);
 // === FIRMA DE TUTORÍA ===
 $pdf->SetFont('Arial', 'B', 10);
 $pdf->SetFillColor(220, 220, 220);
-$pdf->Cell(0, 6, utf8_decode('FIRMA DE ENTERADO POR PARCIAL'), 0, 1, 'C', true);
+$pdf->Cell(0, 6, utf8_decode('FIRMA DEL PADRE DE FAMILIA'), 0, 1, 'C', true);
 $pdf->Ln(4);
 
 // Ancho de cada columna
@@ -349,6 +406,53 @@ $pdf->SetTextColor(250, 0, 0 );
 $pdf->Cell($ancho, 6, utf8_decode('Firma 1'), 1, 0, 'C',true);
 $pdf->Cell($ancho, 6, utf8_decode('Firma 2'), 1, 0, 'C',true);
 $pdf->Cell($ancho, 6, utf8_decode('Firma 3'), 1, 1, 'C',true);
+
+$pdf->Ln(15);
+// === TABLA DE OBSERVACIONES Y SUGERENCIAS ===
+
+$pdf->SetFont('Arial', 'B', 10);
+$pdf->SetTextColor(0, 0, 0); // Color negro para el título principal
+$pdf->SetFillColor(220, 220, 220);
+$pdf->Cell(0, 6, utf8_decode('OBSERVACIONES Y SUGERENCIAS'), 0, 1, 'C', true);
+$pdf->Ln(4);
+
+// Ancho de columnas CORREGIDO (total útil: 192mm = 216mm - 12mm margen izq - 12mm margen der)
+$ancho_periodo = 45;          // Columna izquierda: Periodo de evaluación
+$ancho_observaciones = 147;   // Columna derecha: Observaciones y Sugerencias (192 - 45 = 147)
+
+// Fila 1: Títulos en negrita y color negro
+$pdf->SetFont('Arial', 'B', 9);
+$pdf->SetTextColor(0, 0, 0); // Negro
+$pdf->SetFillColor(200, 200, 200);
+$pdf->Cell($ancho_periodo, 6, utf8_decode('Periodo de evaluación'), 1, 0, 'C', true);
+$pdf->Cell($ancho_observaciones, 6, utf8_decode('Observaciones y Sugerencias'), 1, 1, 'C', true);
+
+// Fila 2: Primer Parcial
+$pdf->SetFont('Arial', 'B', 9);
+$pdf->SetTextColor(0, 0, 0); // Negro
+$pdf->SetFillColor(230, 230, 230);
+$pdf->Cell($ancho_periodo, 30, utf8_decode('Primer Parcial'), 1, 0, 'C', true);
+$pdf->SetFont('Arial', '', 9);
+$pdf->SetTextColor(0, 0, 0); // Negro para el contenido
+$pdf->Cell($ancho_observaciones, 30, '', 1, 1, 'L');
+
+// Fila 3: Segundo Parcial
+$pdf->SetFont('Arial', 'B', 9);
+$pdf->SetTextColor(0, 0, 0); // Negro
+$pdf->SetFillColor(230, 230, 230);
+$pdf->Cell($ancho_periodo, 30, utf8_decode('Segundo Parcial'), 1, 0, 'C', true);
+$pdf->SetFont('Arial', '', 9);
+$pdf->SetTextColor(0, 0, 0); // Negro para el contenido
+$pdf->Cell($ancho_observaciones, 30, '', 1, 1, 'L');
+
+// Fila 4: Tercer Parcial
+$pdf->SetFont('Arial', 'B', 9);
+$pdf->SetTextColor(0, 0, 0); // Negro
+$pdf->SetFillColor(230, 230, 230);
+$pdf->Cell($ancho_periodo, 30, utf8_decode('Tercer Parcial'), 1, 0, 'C', true);
+$pdf->SetFont('Arial', '', 9);
+$pdf->SetTextColor(0, 0, 0); // Negro para el contenido
+$pdf->Cell($ancho_observaciones, 30, '', 1, 1, 'L');
 
 $pdf->Ln(8);
 
