@@ -392,85 +392,65 @@ $pdf->SetFont('Arial', 'B', 10);
 $pdf->Cell(100, 6, utf8_decode('PROMEDIO GENERAL'), 1, 0, 'C', true);
 $pdf->Cell(30, 6, '8.1', 1, 1, 'C', true); // Calcula si lo deseas
 
+// === BLOQUE HORIZONTAL: FIRMA DEL PADRE DE FAMILIA + SUGERENCIAS ===
+$pdf->Ln(8);
 
-$pdf->Ln(10);
+// Posiciones
+$yBloque = $pdf->GetY();
+$ancho_izquierda = 90;   // Firmas
+$ancho_derecha = 90;     // Sugerencias
+$altura_firma = 30;      // Altura generosa para firmas
 
-// === FIRMA DE TUTORÍA ===
+// === FIRMA DEL PADRE DE FAMILIA (Columna izquierda) ===
 $pdf->SetFont('Arial', 'B', 10);
 $pdf->SetFillColor(220, 220, 220);
-$pdf->Cell(0, 6, utf8_decode('FIRMA DEL PADRE DE FAMILIA'), 0, 1, 'C', true);
-$pdf->Ln(4);
-
-// Ancho de cada columna
-$ancho = 60;
-
-// Encabezados
+$pdf->Cell($ancho_izquierda, 6, utf8_decode('FIRMA DEL PADRE DE FAMILIA'), 0, 0, 'C', true);
 $pdf->SetFont('Arial', 'B', 9);
-$pdf->Cell($ancho, 6, utf8_decode('Primer Parcial'), 1, 0, 'C',true);
-$pdf->Cell($ancho, 6, utf8_decode('Segundo Parcial'), 1, 0, 'C',true);
-$pdf->Cell($ancho, 6, utf8_decode('Tercer Parcial'), 1, 1, 'C',true);
-
-// Espacio para firma
+$pdf->SetXY(12, $yBloque + 8);
+$pdf->Cell($ancho_izquierda / 3, 6, utf8_decode('Primer Parcial'), 1, 0, 'C', true);
+$pdf->Cell($ancho_izquierda / 3, 6, utf8_decode('Segundo Parcial'), 1, 0, 'C', true);
+$pdf->Cell($ancho_izquierda / 3, 6, utf8_decode('Tercer Parcial'), 1, 1, 'C', true);
 $pdf->SetFont('Arial', '', 9);
-$pdf->Cell($ancho, 15, '', 1, 0, 'C');
-$pdf->Cell($ancho, 15, '', 1, 0, 'C');
-$pdf->Cell($ancho, 15, '', 1, 1, 'C');
-
-// Texto "Firma"
-$pdf->SetFillColor(230, 230 ,220 );
-$pdf->SetTextColor(250, 0, 0 );
-$pdf->Cell($ancho, 6, utf8_decode('Firma 1'), 1, 0, 'C',true);
-$pdf->Cell($ancho, 6, utf8_decode('Firma 2'), 1, 0, 'C',true);
-$pdf->Cell($ancho, 6, utf8_decode('Firma 3'), 1, 1, 'C',true);
+$pdf->SetXY(12, $yBloque + 14);
+$pdf->Cell($ancho_izquierda / 3, $altura_firma, '', 1, 0, 'C');
+$pdf->Cell($ancho_izquierda / 3, $altura_firma, '', 1, 0, 'C');
+$pdf->Cell($ancho_izquierda / 3, $altura_firma, '', 1, 1, 'C');
 
 
-$pdf->AddPage();
-
-// === TABLA DE OBSERVACIONES Y SUGERENCIAS ===
-
+// === TABLA DE SUGERENCIAS (ÁREAS A LA IZQUIERDA, ESPACIO PARA ESCRIBIR A LA DERECHA) ===
 $pdf->SetFont('Arial', 'B', 10);
-$pdf->SetTextColor(0, 0, 0); // Color negro para el título principal
+$pdf->SetXY(12 + $ancho_izquierda + 6, $yBloque); // 6 = espacio entre columnas
+$pdf->Cell($ancho_derecha, 6, utf8_decode('SUGERENCIAS'), 0, 0, 'C', true);
+
+// Definir el ancho de las columnas
+$ancho_area = 25; // Ancho para el nombre del área
+$ancho_espacio = $ancho_derecha - $ancho_area; // Espacio restante para escribir
+
+// Título de las columnas
+$pdf->SetFont('Arial', 'B', 8);
+$pdf->SetXY(12 + $ancho_izquierda + 6, $yBloque + 8);
 $pdf->SetFillColor(220, 220, 220);
-$pdf->Cell(0, 6, utf8_decode('OBSERVACIONES Y SUGERENCIAS'), 0, 1, 'C', true);
-$pdf->Ln(4);
+$pdf->Cell($ancho_area, 6, utf8_decode('Periodo'), 1, 0, 'C', true);
+$pdf->Cell($ancho_espacio, 6, utf8_decode('Observaciones'), 1, 1, 'C', true);
+$pdf->SetFillColor(255, 255, 255);
 
-// Ancho de columnas CORREGIDO (total útil: 192mm = 216mm - 12mm margen izq - 12mm margen der)
-$ancho_periodo = 45;          // Columna izquierda: Periodo de evaluación
-$ancho_observaciones = 147;   // Columna derecha: Observaciones y Sugerencias (192 - 45 = 147)
+// Definir las áreas (como en el ejemplo)
+$areas = ['1er Parcial','2do Parcial','3er Parcial'];
 
-// Fila 1: Títulos en negrita y color negro
-$pdf->SetFont('Arial', 'B', 9);
-$pdf->SetTextColor(0, 0, 0); // Negro
-$pdf->SetFillColor(200, 200, 200);
-$pdf->Cell($ancho_periodo, 6, utf8_decode('Periodo de evaluación'), 1, 0, 'C', true);
-$pdf->Cell($ancho_observaciones, 6, utf8_decode('Observaciones y Sugerencias'), 1, 1, 'C', true);
+// Altura de cada fila
+$altura_fila = 10;
 
-// Fila 2: Primer Parcial
-$pdf->SetFont('Arial', 'B', 9);
-$pdf->SetTextColor(0, 0, 0); // Negro
-$pdf->SetFillColor(230, 230, 230);
-$pdf->Cell($ancho_periodo, 30, utf8_decode('Primer Parcial'), 1, 0, 'C', true);
-$pdf->SetFont('Arial', '', 9);
-$pdf->SetTextColor(0, 0, 0); // Negro para el contenido
-$pdf->Cell($ancho_observaciones, 30, '', 1, 1, 'L');
-
-// Fila 3: Segundo Parcial
-$pdf->SetFont('Arial', 'B', 9);
-$pdf->SetTextColor(0, 0, 0); // Negro
-$pdf->SetFillColor(230, 230, 230);
-$pdf->Cell($ancho_periodo, 30, utf8_decode('Segundo Parcial'), 1, 0, 'C', true);
-$pdf->SetFont('Arial', '', 9);
-$pdf->SetTextColor(0, 0, 0); // Negro para el contenido
-$pdf->Cell($ancho_observaciones, 30, '', 1, 1, 'L');
-
-// Fila 4: Tercer Parcial
-$pdf->SetFont('Arial', 'B', 9);
-$pdf->SetTextColor(0, 0, 0); // Negro
-$pdf->SetFillColor(230, 230, 230);
-$pdf->Cell($ancho_periodo, 30, utf8_decode('Tercer Parcial'), 1, 0, 'C', true);
-$pdf->SetFont('Arial', '', 9);
-$pdf->SetTextColor(0, 0, 0); // Negro para el contenido
-$pdf->Cell($ancho_observaciones, 30, '', 1, 1, 'L');
+// Dibujar 5 FILAS con las áreas y espacios para escribir
+for ($i = 0; $i < 3; $i++) {
+    $pdf->SetXY(12 + $ancho_izquierda + 6, $yBloque + 14 + ($i * $altura_fila));
+    
+    // Celda para el nombre del área
+    $pdf->SetFillColor(255, 255, 255);
+    $pdf->Cell($ancho_area, $altura_fila, utf8_decode($areas[$i]), 1, 0, 'C');
+    
+    // Celda para escribir las sugerencias
+    $pdf->Cell($ancho_espacio, $altura_fila, '', 1, 1);
+}
 
 $pdf->Ln(8);
 // Salida
