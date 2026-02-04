@@ -107,7 +107,7 @@ class BoletaPDF extends FPDF {
     }
 
     function Footer() {
-        // Posición fija 12 mm antes del borde inferior
+        /* Posición fija 12 mm antes del borde inferior
         $this->SetY(-12);
 
         // Color y fuente
@@ -120,7 +120,7 @@ class BoletaPDF extends FPDF {
 
         // Texto centrado
         $this->SetY(-9);
-        $this->Cell(0, 5, utf8_decode('Documento oficial - Generado el ' . date('d/m/Y H:i')), 0, 0, 'C');
+        $this->Cell(0, 5, utf8_decode('Documento oficial - Generado el ' . date('d/m/Y H:i')), 0, 0, 'C');*/
     }
 }
 
@@ -217,7 +217,7 @@ if ($curp_desencriptado === '' || $curp_desencriptado === '—') {
 $pdf->SetFont('Arial', 'B', 10);
 $pdf->SetTextColor(0, 0,0);
 $pdf->SetX($x, $y);
-$pdf->Cell(40,6,utf8_decode('CURD:'),0,0);
+$pdf->Cell(40,6,utf8_decode('CURP:'),0,0);
 $pdf->SetFont('Arial', '',11);
 $pdf->Cell($ancho_texto -40, 6, utf8_decode( $curp_desencriptado), 0, 1);
 $pdf->SetTextColor(0, 0, 0);
@@ -288,7 +288,7 @@ $pdf->Cell(15, 6, 'CCT:', 0, 0);
 $pdf->SetFont('Arial', 'I', 11);
 $pdf->Cell(0, 6, utf8_decode($cct), 0, 1);
 
-$pdf->Ln(8);
+$pdf->Ln(5);
 
 // ================== TABLA DE CALIFICACIONES ==================
 $pdf->SetFont('Arial', 'B', 10);
