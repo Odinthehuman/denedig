@@ -1,5 +1,5 @@
 <?php
-// generar_pdf_individual.php — Diseño corregido
+// generar_pdf_individual.php — Diseño corregido CON SISTEMA DE RESPALDO
 session_start();
 if (!isset($_SESSION['id_credencial'])) die("Acceso denegado.");
 
@@ -15,6 +15,43 @@ function decryptData($data, $key) {
     if (count($parts) !== 2) return '—';
     [$cipher, $iv] = $parts;
     return openssl_decrypt($cipher, 'aes-256-cbc', $key, 0, base64_decode($iv));
+}
+
+// ============================================================
+// FUNCIÓN PARA CREAR ESTRUCTURA DE CARPETAS Y GUARDAR PDF
+// ============================================================
+function guardarPDFRespaldo($pdf, $id_escuela, $id_alumno) {
+    // Ruta base de respaldos (relativa al directorio del script)
+    $rutaBase = __DIR__ . '/respaldos/boletas/' . $id_escuela . '/';
+    
+    // Crear estructura de carpetas si no existe
+    if (!file_exists($rutaBase)) {
+        if (!mkdir($rutaBase, 0755, true)) {
+            error_log("ERROR: No se pudo crear la carpeta de respaldos: $rutaBase");
+            return false;
+        }
+    }
+    
+    // Verificar que la carpeta sea escribible
+    if (!is_writable($rutaBase)) {
+        error_log("ERROR: La carpeta $rutaBase no tiene permisos de escritura");
+        return false;
+    }
+    
+    // Generar nombre único con timestamp
+    $fecha = date('Y-m-d_H-i-s');
+    $nombreArchivo = "Boleta_Alumno_{$id_alumno}_{$fecha}.pdf";
+    $rutaCompleta = $rutaBase . $nombreArchivo;
+    
+    // Guardar el PDF en el servidor
+    try {
+        $pdf->Output('F', $rutaCompleta);
+        error_log("INFO: Boleta guardada exitosamente en: $rutaCompleta");
+        return $rutaCompleta;
+    } catch (Exception $e) {
+        error_log("ERROR al guardar PDF: " . $e->getMessage());
+        return false;
+    }
 }
 
 // --- Datos del alumno ---
@@ -42,6 +79,7 @@ $alum = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
 
 if (!$alum) die("Alumno no encontrado.");
 
+$id_escuela = $alum['id_escuela']; // Variable crucial para la ruta de respaldo
 $direccion = $alum['direccion'] ?? 'Dirección no disponible';
 $nombre_completo = $alum['nombre_credencial'] . ' ' . decryptData($alum['apellidos_credencial'], $secretKey);
 $grado   = $alum['grado_credencial'];
@@ -158,7 +196,7 @@ $pdf->Image($foto, 172, $yActual, 30, 35);
 
 $pdf->SetY($yActual + 38);
 
-// === DATOS DE LA ESCUELA === (CORRECCIÓN CCT Y DIRECCIÓN)
+// === DATOS DE LA ESCUELA ===
 $pdf->SetFont('Arial', 'B', 10);
 $pdf->Cell(0, 6, utf8_decode('DATOS DE LA ESCUELA'), 0, 1, 'C', true);
 $pdf->Ln(2);
@@ -168,9 +206,9 @@ $pdf->Ln(3);
 $pdf->SetFont('Arial', 'B', 10);
 $pdf->Cell(45, 6, utf8_decode('Dirección:'), 0, 0); 
 $pdf->SetFont('Arial', '', 10); 
-$pdf->Cell(80, 6, utf8_decode($direccion), 0, 0); // Ajuste de ancho
+$pdf->Cell(80, 6, utf8_decode($direccion), 0, 0);
 $pdf->SetFont('Arial', 'B', 10); 
-$pdf->Cell(10, 6, 'CCT:', 0, 0); // Ajuste de ancho
+$pdf->Cell(10, 6, 'CCT:', 0, 0);
 $pdf->SetFont('Arial', '', 10); 
 $pdf->Cell(0, 6, $cct, 0, 1);
 $pdf->Ln(5);
@@ -250,8 +288,8 @@ foreach ($st_config as $key => $cfg) {
     if ($key != 'M') $pdf->Line($xSt, $cfg['y']+$altoCeldaSt, $xSt+$an_st, $cfg['y']+$altoCeldaSt);
 }
 
-// === EXPLICACIÓN DE STATUS (CORRECCIÓN DE ESPACIO) ===
-$pdf->Ln(15); // Aumentado para separar del promedio general
+// === EXPLICACIÓN DE STATUS ===
+$pdf->Ln(15);
 $pdf->SetFillColor(220, 220, 220);
 $pdf->SetFont('Arial', 'B', 10);
 $pdf->Cell(40, 8, 'RENDIMIENTO', 1, 0, 'C', true);
@@ -275,6 +313,7 @@ foreach($legend as $item) {
     $pdf->SetXY($xX + 50, $yY);
 }
 $pdf->SetTextColor(0);
+
 // === BLOQUE FIRMAS (VERTICAL) Y SUGERENCIAS ===
 $pdf->Ln(12);
 $yF = $pdf->GetY();
@@ -302,6 +341,21 @@ foreach($periodos as $p) {
     $pdf->Cell(67, 13, '', 1, 1);
 }
 
+// ============================================================
+// GUARDAR RESPALDO EN SERVIDOR
+// ============================================================
+$rutaRespaldo = guardarPDFRespaldo($pdf, $id_escuela, $id_alumno);
+
+if ($rutaRespaldo) {
+    // Respaldo exitoso - registrado en error_log
+    // Puedes descomentar la siguiente línea para mostrar mensaje al usuario
+    // echo "<script>console.log('Respaldo guardado: $rutaRespaldo');</script>";
+}
+
+// ============================================================
+// MOSTRAR PDF AL USUARIO
+// ============================================================
 $pdf->Output('I', 'Boleta_' . $id_alumno . '.pdf');
+
 mysqli_close($conexion);
 ?>
