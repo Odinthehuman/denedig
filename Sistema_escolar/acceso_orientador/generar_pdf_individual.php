@@ -9,7 +9,7 @@ $secretKey = 'your-secret-key';
 
 $id_alumno = $_GET['id'] ?? die('ID no válido');
 
-// --- Función para desencriptar ---
+// --- Función para desencriptarrccrr ---
 function decryptData($data, $key) {
     if (empty($data)) return '';
     $parts = explode('::', base64_decode($data), 2);
