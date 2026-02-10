@@ -1,6 +1,5 @@
 <?php
-// generar_pdf_individual.php — VERSIÓN CON SUBCARPETAS POR GRADO Y GRUPO
-// Escalable a múltiples escuelas
+// generar_pdf_individual.php — Diseño Original + Lógica de Respaldo Condicional
 session_start();
 if (!isset($_SESSION['id_credencial'])) die("Acceso denegado.");
 
@@ -8,8 +7,9 @@ include '../funciones/conexQRConejo.php';
 $secretKey = 'your-secret-key';
 
 $id_alumno = $_GET['id'] ?? die('ID no válido');
+$forzar_respaldo = isset($_GET['forzar_respaldo']) && $_GET['forzar_respaldo'] == 1;
 
-// --- Función para desencriptarrccrr ---
+// --- Función para desencriptar ---
 function decryptData($data, $key) {
     if (empty($data)) return '';
     $parts = explode('::', base64_decode($data), 2);
@@ -19,160 +19,133 @@ function decryptData($data, $key) {
 }
 
 // ============================================================
-// FUNCIÓN PARA CONVERTIR GRUPO (LETRA) A NÚMERO ROMANO
+// FUNCIÓN PARA CONVERTIR GRUPO A NÚMERO ROMANO
 // ============================================================
 function convertirGrupoARomano($grupo) {
-    // Normalizar a mayúscula y limpiar espacios
     $grupo = strtoupper(trim($grupo));
     
-    // Mapeo de letras a números romanos
     $mapeo = [
-        'A' => 'I',
-        'B' => 'II',
-        'C' => 'III',
-        'D' => 'IV',
-        'E' => 'V',
-        'F' => 'VI',
-        'G' => 'VII',
-        'H' => 'VIII',
-        'I' => 'IX',
-        'J' => 'X',
-        'K' => 'XI',
-        'L' => 'XII',
-        'M' => 'XIII',
-        'N' => 'XIV',
-        'O' => 'XV',
-        'P' => 'XVI',
-        'Q' => 'XVII',
-        'R' => 'XVIII',
-        'S' => 'XIX',
-        'T' => 'XX',
-        'U' => 'XXI',
-        'V' => 'XXII',
-        'W' => 'XXIII',
-        'X' => 'XXIV',
-        'Y' => 'XXV',
-        'Z' => 'XXVI'
+        'A' => 'I',    'B' => 'II',   'C' => 'III',  'D' => 'IV',
+        'E' => 'V',    'F' => 'VI',   'G' => 'VII',  'H' => 'VIII',
+        'I' => 'IX',   'J' => 'X',    'K' => 'XI',   'L' => 'XII',
+        'M' => 'XIII', 'N' => 'XIV',  'O' => 'XV',   'P' => 'XVI',
+        'Q' => 'XVII', 'R' => 'XVIII','S' => 'XIX',  'T' => 'XX',
     ];
     
     return isset($mapeo[$grupo]) ? $mapeo[$grupo] : $grupo;
 }
 
 // ============================================================
-// FUNCIÓN PARA NORMALIZAR EL NOMBRE DEL GRADO
-// Convierte números o palabras a formato estándar
+// FUNCIÓN PARA NORMALIZAR GRADO
 // ============================================================
 function normalizarGrado($grado) {
-    // Limpiar y normalizar
     $grado = trim($grado);
     
-    // Mapeo de posibles variantes a nombres estándar
     $mapeoGrados = [
-        // Números
-        '1' => 'Primero',
-        '2' => 'Segundo',
-        '3' => 'Tercero',
-        '4' => 'Cuarto',
-        '5' => 'Quinto',
-        '6' => 'Sexto',
-        
-        // Variantes escritas
-        '1°' => 'Primero',
-        '2°' => 'Segundo',
-        '3°' => 'Tercero',
-        '4°' => 'Cuarto',
-        '5°' => 'Quinto',
-        '6°' => 'Sexto',
-        
-        // Nombres completos (normalizar capitalización)
-        'primero' => 'Primero',
-        'segundo' => 'Segundo',
-        'tercero' => 'Tercero',
-        'cuarto' => 'Cuarto',
-        'quinto' => 'Quinto',
-        'sexto' => 'Sexto',
-        
-        'PRIMERO' => 'Primero',
-        'SEGUNDO' => 'Segundo',
-        'TERCERO' => 'Tercero',
-        'CUARTO' => 'Cuarto',
-        'QUINTO' => 'Quinto',
-        'SEXTO' => 'Sexto',
+        '1' => 'Primero',  '2' => 'Segundo', '3' => 'Tercero',
+        '4' => 'Cuarto',   '5' => 'Quinto',  '6' => 'Sexto',
+        '1°' => 'Primero', '2°' => 'Segundo','3°' => 'Tercero',
+        '4°' => 'Cuarto',  '5°' => 'Quinto', '6°' => 'Sexto',
+        'primero' => 'Primero', 'segundo' => 'Segundo', 'tercero' => 'Tercero',
+        'cuarto' => 'Cuarto',   'quinto' => 'Quinto',   'sexto' => 'Sexto',
+        'PRIMERO' => 'Primero', 'SEGUNDO' => 'Segundo', 'TERCERO' => 'Tercero',
+        'CUARTO' => 'Cuarto',   'QUINTO' => 'Quinto',   'SEXTO' => 'Sexto',
     ];
     
-    // Buscar en el mapeo
-    if (isset($mapeoGrados[$grado])) {
-        return $mapeoGrados[$grado];
-    }
-    
-    // Si ya está en formato correcto, retornar con primera letra mayúscula
-    return ucfirst(strtolower($grado));
+    return isset($mapeoGrados[$grado]) ? $mapeoGrados[$grado] : ucfirst(strtolower($grado));
 }
 
 // ============================================================
-// FUNCIÓN PARA CREAR ESTRUCTURA DE CARPETAS Y GUARDAR PDF
-// CON ORGANIZACIÓN POR GRADO Y GRUPO
-// ESCALABLE A MÚLTIPLES ESCUELAS
+// FUNCIÓN PARA VERIFICAR SI LA BOLETA ESTÁ COMPLETA
 // ============================================================
-function guardarPDFRespaldo($pdf, $id_escuela, $id_alumno, $grado, $grupo) {
-    // Ruta base de respaldos
-    $rutaBase = __DIR__ . '/respaldos/boletas/';
+function boletaEstaCompleta($materias, $calificaciones) {
+    $totalMaterias = count($materias);
+    $materiasCompletas = 0;
     
-    // ============================================================
-    // LISTA DE ESCUELAS QUE USAN ORGANIZACIÓN POR GRADO Y GRUPO
-    // Para agregar más escuelas, simplemente añádelas a este array
-    // ============================================================
-    $escuelasConGrupos = [63]; // Agregar más IDs aquí: [63, 75, 82, ...]
-    
-    // Verificar si la escuela usa organización por grado y grupo
-    if (in_array($id_escuela, $escuelasConGrupos)) {
-        // ====== ORGANIZACIÓN POR GRADO Y GRUPO ======
+    foreach ($materias as $mat) {
+        $id_materia = (int)$mat['id_materia'];
         
-        // Normalizar grado y convertir grupo a romano
-        $gradoNormalizado = normalizarGrado($grado);
-        $grupoRomano = convertirGrupoARomano($grupo);
-        
-        // Construir nombre de carpeta: "Grado Grupo" (ej: "Primero I")
-        $nombreCarpetaGrupo = $gradoNormalizado . ' ' . $grupoRomano;
-        
-        // Ruta completa: /respaldos/boletas/[ID_ESCUELA]/grupos/[Grado GrupoRomano]/
-        $rutaCompleta = $rutaBase . $id_escuela . '/grupos/' . $nombreCarpetaGrupo . '/';
-        
-        error_log("INFO: Escuela $id_escuela - Organización por grado y grupo");
-        error_log("INFO: Grado original: '$grado' -> Normalizado: '$gradoNormalizado'");
-        error_log("INFO: Grupo original: '$grupo' -> Romano: '$grupoRomano'");
-        error_log("INFO: Carpeta final: '$nombreCarpetaGrupo'");
-        
-    } else {
-        // ====== ORGANIZACIÓN SIMPLE (OTRAS ESCUELAS) ======
-        $rutaCompleta = $rutaBase . $id_escuela . '/';
-        error_log("INFO: Escuela $id_escuela - Organización simple (sin subcarpetas)");
-    }
-    
-    // Crear estructura de carpetas si no existe (recursivo - crea toda la jerarquía)
-    if (!file_exists($rutaCompleta)) {
-        if (!mkdir($rutaCompleta, 0755, true)) {
-            error_log("ERROR: No se pudo crear la carpeta de respaldos: $rutaCompleta");
-            return false;
+        if (isset($calificaciones[$id_materia])) {
+            $cal = $calificaciones[$id_materia];
+            $p1 = $cal['primer_parcial'] ?? null;
+            $p2 = $cal['segundo_parcial'] ?? null;
+            $p3 = $cal['tercer_parcial'] ?? null;
+            
+            // Verificar que los 3 parciales estén capturados y sean numéricos
+            if (is_numeric($p1) && is_numeric($p2) && is_numeric($p3)) {
+                $materiasCompletas++;
+            }
         }
-        error_log("INFO: Estructura de carpetas creada exitosamente: $rutaCompleta");
     }
     
-    // Verificar que la carpeta sea escribible
-    if (!is_writable($rutaCompleta)) {
-        error_log("ERROR: La carpeta $rutaCompleta no tiene permisos de escritura");
+    // La boleta está completa si todas las materias tienen 3 parciales
+    $estaCompleta = ($materiasCompletas === $totalMaterias && $totalMaterias > 0);
+    
+    error_log("INFO: Verificación de boleta - Total materias: $totalMaterias, Materias completas: $materiasCompletas, ¿Completa?: " . ($estaCompleta ? 'SÍ' : 'NO'));
+    
+    return $estaCompleta;
+}
+
+// ============================================================
+// FUNCIÓN PARA GUARDAR PDF CON LÓGICA CONDICIONAL
+// ============================================================
+function guardarPDFRespaldo($pdf, $id_escuela, $id_alumno, $grado, $grupo, $debeGuardar, $esForzado = false) {
+    // Si no debe guardar y tampoco es forzado, retornar false
+    if (!$debeGuardar && !$esForzado) {
+        error_log("INFO: Respaldo NO ejecutado - Boleta incompleta y no forzado (Alumno: $id_alumno)");
         return false;
     }
     
-    // Generar nombre único con timestamp
+    $rutaBase = __DIR__ . '/respaldos/boletas/';
+    
+    // Lista de escuelas con organización por grado y grupo
+    $escuelasConGrupos = [63];
+    
+    if (in_array($id_escuela, $escuelasConGrupos)) {
+        // Organización por grado y grupo
+        $gradoNormalizado = normalizarGrado($grado);
+        $grupoRomano = convertirGrupoARomano($grupo);
+        $nombreCarpetaGrupo = $gradoNormalizado . ' ' . $grupoRomano;
+        $rutaCompleta = $rutaBase . $id_escuela . '/grupos/' . $nombreCarpetaGrupo . '/';
+        
+        error_log("INFO: Escuela $id_escuela - Organización por grado y grupo");
+        error_log("INFO: Grado: '$grado' → '$gradoNormalizado', Grupo: '$grupo' → '$grupoRomano'");
+    } else {
+        // Organización simple
+        $rutaCompleta = $rutaBase . $id_escuela . '/';
+    }
+    
+    // Crear estructura de carpetas si no existe
+    if (!file_exists($rutaCompleta)) {
+        if (!mkdir($rutaCompleta, 0755, true)) {
+            error_log("ERROR: No se pudo crear la carpeta: $rutaCompleta");
+            return false;
+        }
+    }
+    
+    // Verificar permisos de escritura
+    if (!is_writable($rutaCompleta)) {
+        error_log("ERROR: La carpeta no tiene permisos de escritura: $rutaCompleta");
+        return false;
+    }
+    
+    // Determinar el tipo de respaldo y nombre del archivo
     $fecha = date('Y-m-d_H-i-s');
-    $nombreArchivo = "Boleta_Alumno_{$id_alumno}_{$fecha}.pdf";
+    
+    if ($esForzado) {
+        $tipoRespaldo = "Manual";
+        $nombreArchivo = "Boleta_Manual_{$id_alumno}_{$fecha}.pdf";
+    } else {
+        $tipoRespaldo = "Final";
+        $nombreArchivo = "Boleta_Final_{$id_alumno}_{$fecha}.pdf";
+    }
+    
     $rutaArchivo = $rutaCompleta . $nombreArchivo;
     
-    // Guardar el PDF en el servidor (Modo 'F' - File)
+    // Guardar el PDF en el servidor
     try {
         $pdf->Output('F', $rutaArchivo);
-        error_log("INFO: Boleta guardada exitosamente en: $rutaArchivo");
+        error_log("INFO: Respaldo $tipoRespaldo guardado exitosamente: $rutaArchivo");
         return $rutaArchivo;
     } catch (Exception $e) {
         error_log("ERROR al guardar PDF: " . $e->getMessage());
@@ -205,13 +178,13 @@ $alum = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
 
 if (!$alum) die("Alumno no encontrado.");
 
-// Variables cruciales para la ruta de respaldo
+// Variables del alumno
 $id_escuela = $alum['id_escuela'];
-$grado = $alum['grado_credencial']; // NUEVO: Ahora se usa para crear subcarpetas
+$grado = $alum['grado_credencial'];
 $grupo = $alum['grupo_credencial'];
+$turno = $alum['turno_credencial'];
 $direccion = $alum['direccion'] ?? 'Dirección no disponible';
 $nombre_completo = $alum['nombre_credencial'] . ' ' . decryptData($alum['apellidos_credencial'], $secretKey);
-$turno = $alum['turno_credencial'];
 $escuela = $alum['nombre_escuela'];
 $cct = $alum['cct_escuela'];
 
@@ -225,7 +198,7 @@ $foto2 = !empty($alum['ruta_foto2'])
 $foto_default = __DIR__ . '/fpdf/R.png';
 $foto = file_exists($foto1) ? $foto1 : (file_exists($foto2) ? $foto2 : $foto_default);
 
-// --- Materias ---
+// --- Materias asignadas al alumno ---
 $materias = [];
 $stmt = mysqli_prepare($conexion, "
     SELECT m.id_materia, m.nombre_materia
@@ -239,7 +212,7 @@ mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
 while ($row = mysqli_fetch_assoc($result)) $materias[] = $row;
 
-// --- Calificaciones ---
+// --- Calificaciones del alumno ---
 $calificaciones = [];
 $stmt = mysqli_prepare($conexion, "SELECT id_materia, primer_parcial, segundo_parcial, tercer_parcial FROM calificaciones WHERE id_alumno = ?");
 mysqli_stmt_bind_param($stmt, "i", $id_alumno);
@@ -247,6 +220,16 @@ mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
 while ($row = mysqli_fetch_assoc($result)) {
     $calificaciones[(int)$row['id_materia']] = $row;
+}
+
+// ============================================================
+// VERIFICAR SI LA BOLETA ESTÁ COMPLETA
+// ============================================================
+$boletaCompleta = boletaEstaCompleta($materias, $calificaciones);
+$debeGuardarRespaldo = $boletaCompleta || $forzar_respaldo;
+
+if ($forzar_respaldo) {
+    error_log("INFO: Respaldo FORZADO activado para alumno $id_alumno");
 }
 
 // --- FPDF EXTENDIDO ---
@@ -271,7 +254,7 @@ $pdf = new BoletaPDF('P', 'mm', 'Letter');
 $pdf->SetMargins(12, 12, 12);
 $pdf->AddPage();
 
-// ================= ENCABEZADO OFICIAL =================
+// ================= ENCABEZADO OFICIAL (DISEÑO ORIGINAL) =================
 $logo_sep = __DIR__ . '/img/logo_sep.png';
 $logo_edomx = __DIR__ . '/img/edomex.png';
 if (file_exists($logo_sep)) $pdf->Image($logo_sep, 12, 8, 50);
@@ -288,7 +271,7 @@ $pdf->SetFont('Arial', 'I', 10);
 $pdf->Cell(0, 5, utf8_decode('CICLO ESCOLAR 2025-2026'), 0, 1, 'C');
 $pdf->Ln(10);
 
-// === DATOS DEL ALUMNO ===
+// === DATOS DEL ALUMNO (DISEÑO ORIGINAL) ===
 $pdf->SetFont('Arial', 'B', 10);
 $pdf->SetFillColor(220, 220, 220);
 $pdf->Cell(0, 6, utf8_decode('DATOS DEL ALUMNO(A)'), 0, 1, 'C', true);
@@ -323,7 +306,7 @@ $pdf->Image($foto, 172, $yActual, 30, 35);
 
 $pdf->SetY($yActual + 38);
 
-// === DATOS DE LA ESCUELA ===
+// === DATOS DE LA ESCUELA (DISEÑO ORIGINAL) ===
 $pdf->SetFont('Arial', 'B', 10);
 $pdf->Cell(0, 6, utf8_decode('DATOS DE LA ESCUELA'), 0, 1, 'C', true);
 $pdf->Ln(2);
@@ -340,7 +323,7 @@ $pdf->SetFont('Arial', '', 10);
 $pdf->Cell(0, 6, $cct, 0, 1);
 $pdf->Ln(5);
 
-// ================== TABLA DE CALIFICACIONES ==================
+// ================== TABLA DE CALIFICACIONES (DISEÑO ORIGINAL) ==================
 $yInicioTabla = $pdf->GetY();
 $an_m = 90; $an_p = 15; $an_pf = 30; $an_st = 25;
 
@@ -388,7 +371,7 @@ $pdf->Cell($an_m + ($an_p*3), 8, 'PROMEDIO GENERAL', 1, 0, 'R', true);
 $pdf->Cell($an_pf, 8, $prom_gr, 1, 0, 'C', true);
 $pdf->Cell($an_st, 8, '', 'LRB', 1);
 
-// DIBUJAR BLOQUE STATUS (Círculos)
+// DIBUJAR BLOQUE STATUS (DISEÑO ORIGINAL)
 $yFinTabla = $pdf->GetY();
 $altoContenidoStatus = $yFinTabla - ($yInicioTabla + 7);
 $altoCeldaSt = $altoContenidoStatus / 3;
@@ -415,7 +398,7 @@ foreach ($st_config as $key => $cfg) {
     if ($key != 'M') $pdf->Line($xSt, $cfg['y']+$altoCeldaSt, $xSt+$an_st, $cfg['y']+$altoCeldaSt);
 }
 
-// === EXPLICACIÓN DE STATUS ===
+// === EXPLICACIÓN DE STATUS (DISEÑO ORIGINAL) ===
 $pdf->Ln(15);
 $pdf->SetFillColor(220, 220, 220);
 $pdf->SetFont('Arial', 'B', 10);
@@ -441,11 +424,10 @@ foreach($legend as $item) {
 }
 $pdf->SetTextColor(0);
 
-// === BLOQUE FIRMAS (VERTICAL) Y SUGERENCIAS ===
+// === BLOQUE FIRMAS Y SUGERENCIAS (DISEÑO ORIGINAL) ===
 $pdf->Ln(12);
 $yF = $pdf->GetY();
 
-// --- Firmas (Lado Izquierdo) ---
 $pdf->SetFont('Arial', 'B', 10);
 $pdf->SetFillColor(220, 220, 220);
 $pdf->Cell(90, 6, 'FIRMA DEL TUTOR(A)', 1, 1, 'C', true);
@@ -457,7 +439,6 @@ foreach($periodos as $p) {
     $pdf->Cell(65, 13, '', 1, 1);
 }
 
-// --- Sugerencias (Lado Derecho) ---
 $pdf->SetXY(110, $yF);
 $pdf->SetFont('Arial', 'B', 10);
 $pdf->Cell(92, 6, 'SUGERENCIAS / OBSERVACIONES', 1, 1, 'C', true);
@@ -469,18 +450,17 @@ foreach($periodos as $p) {
 }
 
 // ============================================================
-// GUARDAR RESPALDO EN SERVIDOR (CON GRADO Y GRUPO)
+// GUARDAR RESPALDO EN SERVIDOR (LÓGICA CONDICIONAL MANTENIDA)
 // ============================================================
-$rutaRespaldo = guardarPDFRespaldo($pdf, $id_escuela, $id_alumno, $grado, $grupo);
+$rutaRespaldo = guardarPDFRespaldo($pdf, $id_escuela, $id_alumno, $grado, $grupo, $debeGuardarRespaldo, $forzar_respaldo);
 
 if ($rutaRespaldo) {
-    // Respaldo exitoso - registrado en error_log
-    // Puedes descomentar la siguiente línea para mostrar mensaje al usuario
-    // echo "<script>console.log('Respaldo guardado: $rutaRespaldo');</script>";
+    $tipoRespaldo = $forzar_respaldo ? "MANUAL" : "AUTOMÁTICO";
+    error_log("INFO: Respaldo $tipoRespaldo guardado para alumno $id_alumno");
 }
 
 // ============================================================
-// MOSTRAR PDF AL USUARIO (Modo 'I' - Inline)
+// MOSTRAR PDF AL USUARIO (SIEMPRE)
 // ============================================================
 $pdf->Output('I', 'Boleta_' . $id_alumno . '.pdf');
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Boleta Moderna</title>
-<!--boleta_vista.php-->
+<!--boleta_vista.php - DISEÑO ORIGINAL + BOTÓN RESPALDO MANUAL-->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;600&display=swap" rel="stylesheet">
     <style>
@@ -58,6 +58,33 @@
             border-radius: 10px 10px;
             margin-top: auto;
         }
+        /* Botón de respaldo manual - estilo discreto que combina con el diseño */
+        .backup-btn {
+            background: rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            text-decoration: none;
+            color: white;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-left: 8px;
+            display: inline-block;
+        }
+        .backup-btn:hover {
+            background: rgba(255, 255, 255, 0.5);
+            color: white;
+        }
+        /* Badge para boleta completa */
+        .badge-complete {
+            background: rgba(40, 167, 69, 0.9);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-left: 8px;
+            font-weight: 600;
+        }
         .grades-table {
             width: 100%;
             border-collapse: collapse;
@@ -72,7 +99,7 @@
             border: 1px solid #ddd;
         }
         .student-card{
-            background: linear-gradient( to right, #0f6fff, #14f1f8);
+            background: linear-gradient(to right, #0f6fff, #14f1f8);
         }
         .grades-table td {
             padding: 8px;
@@ -94,6 +121,7 @@
         <?php
         $nombre_completo = htmlspecialchars($alum['nombre_credencial'] . ' ' . $alum['apellidos_decrypted']);
         $foto = !empty($alum['ruta_foto']) ? htmlspecialchars($alum['ruta_foto']) : 'https://tse3.mm.bing.net/th/id/OIP.2L4bAjBAkwILmakMvHA8AgHaFY?rs=1&pid=ImgDetMain&o=7&rm=3';
+        $boleta_completa = $alum['boleta_completa'] ?? false;
         ?>
         <div class="student-card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -104,19 +132,48 @@
                         <div style="font-size: 0.9rem; color: #f9f9f9;">Estudiante / <?= htmlspecialchars($grado) ?> <?= htmlspecialchars($grupo_romano)?> <?= htmlspecialchars(" / Turno:".$turno) ?></div>
                     </div>
                 </div>
-                <a href="generar_pdf_individual.php?id=<?= $alum['id_credencial'] ?>" target="_blank" class="download-btn">
-                    📄 Imprimir PDF
-                </a>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <!-- Botón principal: Imprimir PDF (siempre visible) -->
+                    <a href="generar_pdf_individual.php?id=<?= $alum['id_credencial'] ?>" target="_blank" class="download-btn">
+                        📄 Imprimir PDF
+                    </a>
+                    
+                    <?php if ($boleta_completa): ?>
+                        <!-- Si está completa: mostrar badge verde -->
+                        <span class="badge-complete">✓ Respaldada</span>
+                    <?php else: ?>
+                        <!-- Si NO está completa: mostrar botón de respaldo manual -->
+                        <a href="generar_pdf_individual.php?id=<?= $alum['id_credencial'] ?>&forzar_respaldo=1" 
+                           target="_blank" 
+                           class="backup-btn"
+                           onclick="return confirm('¿Generar respaldo manual?\n\nSe guardará como Boleta_Manual_<?= $alum['id_credencial'] ?>.pdf');">
+                            💾 Respaldar
+                        </a>
+                    <?php endif; ?>
+                </div>
             </div>
-
-           
         </div>
     <?php endforeach; ?>
-</div><!-- Botón ZIP -->
-    <a href="generar_zip_boletas.php?grado=<?= urlencode($grado) ?>&grupo=<?= urlencode($grupo) ?>&turno=<?= urlencode($turno) ?>" 
-       class="btn btn-download-all">
-        Descargar Todas las Boletas en ZIP (<?= count($alumnos) ?> estudiantes)
-    </a>
+</div>
+
+<!-- Botón ZIP -->
+<a href="generar_zip_boletas.php?grado=<?= urlencode($grado) ?>&grupo=<?= urlencode($grupo) ?>&turno=<?= urlencode($turno) ?>" 
+   class="btn btn-download-all">
+    Descargar Todas las Boletas en ZIP (<?= count($alumnos) ?> estudiantes)
+</a>
+
+<!-- Nota informativa discreta -->
+<div class="container mt-3 mb-4">
+    <div class="alert alert-info" style="font-size: 0.9rem;">
+        <strong>ℹ️ Información sobre Respaldos:</strong>
+        <ul class="mb-0" style="font-size: 0.85rem;">
+            <li><strong>Respaldo Automático:</strong> Las boletas con todas las calificaciones capturadas se guardan automáticamente como <code>Boleta_Final_[ID].pdf</code></li>
+            <li><strong>Botón "Respaldar":</strong> Permite guardar manualmente boletas incompletas como <code>Boleta_Manual_[ID].pdf</code></li>
+            <li><strong>Ubicación:</strong> <code>respaldos/boletas/<?= $id_escuela ?>/grupos/[Grado] [Grupo]/</code></li>
+        </ul>
+    </div>
+</div>
+
 <?php include 'footer_orientador.php'; ?>
 
 </body>

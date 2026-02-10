@@ -1,5 +1,5 @@
 <?php
-// boleta_alumnos_nueva.php — Solo lógica (sincronizada con info_grupo.php)
+// boleta_alumnos_nueva.php — DISEÑO ORIGINAL + LÓGICA DE RESPALDO CONDICIONAL
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
@@ -102,6 +102,50 @@ while ($row = mysqli_fetch_assoc($result)) {
     $calificaciones[$row['id_alumno']][$row['id_materia']] = $row;
 }
 
+// ============================================================
+// FUNCIÓN PARA VERIFICAR SI BOLETA ESTÁ COMPLETA
+// (Necesaria para determinar si mostrar botón de respaldo)
+// ============================================================
+function verificarBoletaCompleta($id_alumno, $materias, $calificaciones) {
+    $total_materias = count($materias);
+    $materias_completas = 0;
+    
+    if (!isset($calificaciones[$id_alumno])) {
+        return false;
+    }
+    
+    foreach ($materias as $mat) {
+        $id_materia = (int)$mat['id_materia'];
+        
+        if (isset($calificaciones[$id_alumno][$id_materia])) {
+            $cal = $calificaciones[$id_alumno][$id_materia];
+            $p1 = $cal['primer_parcial'] ?? null;
+            $p2 = $cal['segundo_parcial'] ?? null;
+            $p3 = $cal['tercer_parcial'] ?? null;
+            
+            // Verificar que los 3 parciales estén capturados y sean numéricos
+            if (is_numeric($p1) && is_numeric($p2) && is_numeric($p3)) {
+                $materias_completas++;
+            }
+        }
+    }
+    
+    // Completa = todas las materias con 3 parciales
+    return ($materias_completas === $total_materias && $total_materias > 0);
+}
+
+// ============================================================
+// VERIFICAR ESTADO DE CADA ALUMNO
+// ============================================================
+$alumnos_con_estado = [];
+foreach ($alumnos_raw as $alumno) {
+    $id_alumno = $alumno['id_credencial'];
+    $boleta_completa = verificarBoletaCompleta($id_alumno, $materias, $calificaciones);
+    
+    $alumno['boleta_completa'] = $boleta_completa;
+    $alumnos_con_estado[] = $alumno;
+}
+
 // --- 8. Grupo a romano ---
 function grupoToRomano($letra) {
     $map = ['A'=>'I','B'=>'II','C'=>'III','D'=>'IV','E'=>'V','F'=>'VI','G'=>'VII','H'=>'VIII','I'=>'IX','J'=>'X'];
@@ -110,7 +154,7 @@ function grupoToRomano($letra) {
 $grupo_romano = grupoToRomano($grupo);
 
 // --- 9. Pasar variables a la vista ---
-$alumnos = $alumnos_raw;
+$alumnos = $alumnos_con_estado;
 
 include 'header_orientador.php'; 
 include 'vista/boleta_vista.php'; 
